@@ -455,59 +455,42 @@ const ChatWindow = ({ id }: { id?: string }) => {
       }
     };
 
-    const res = await fetch('/api/chat', {
+    const res = await fetch('http://localhost:5000/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        content: message,
-        message: {
-          messageId: messageId,
-          chatId: chatId!,
-          content: message,
-        },
-        chatId: chatId!,
-        files: fileIds,
-        focusMode: focusMode,
-        optimizationMode: optimizationMode,
-        history: chatHistory,
-        chatModel: {
-          name: chatModelProvider.name,
-          provider: chatModelProvider.provider,
-        },
-        embeddingModel: {
-          name: embeddingModelProvider.name,
-          provider: embeddingModelProvider.provider,
-        },
+        query: message
       }),
     });
 
-    if (!res.body) throw new Error('No response body');
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    let partialChunk = '';
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      partialChunk += decoder.decode(value, { stream: true });
-
-      try {
-        const messages = partialChunk.split('\n');
-        for (const msg of messages) {
-          if (!msg.trim()) continue;
-          const json = JSON.parse(msg);
-          messageHandler(json);
-        }
-        partialChunk = '';
-      } catch (error) {
-        console.warn('Incomplete JSON, waiting for next chunk...');
-      }
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
+
+    const data = await res.json();
+    
+    // 处理响应数据
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        content: data.message || data.error,
+        messageId: messageId || crypto.randomBytes(7).toString('hex'),
+        chatId: chatId!,
+        role: 'assistant',
+        sources: data.sources || [],
+        createdAt: new Date(),
+      },
+    ]);
+
+    setChatHistory((prevHistory) => [
+      ...prevHistory,
+      ['human', message],
+      ['assistant', data.message || data.error],
+    ]);
+
+    setLoading(false);
   };
 
   const rewrite = (messageId: string) => {

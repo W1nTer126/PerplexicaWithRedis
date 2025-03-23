@@ -9,6 +9,22 @@ services:
       - perplexica-network
     restart: unless-stopped
 
+  redis:
+    image: redis:6-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
+    networks:
+      - perplexica-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes  # 启用持久化
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   app:
     image: itzcrazykns1337/perplexica:main
     build:
@@ -16,6 +32,8 @@ services:
       dockerfile: app.dockerfile
     environment:
       - SEARXNG_API_URL=http://searxng:8080
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     ports:
       - 3000:3000
     networks:
@@ -24,6 +42,9 @@ services:
       - backend-dbstore:/home/perplexica/data
       - uploads:/home/perplexica/uploads
       - ./config.toml:/home/perplexica/config.toml
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
 networks:
@@ -32,3 +53,4 @@ networks:
 volumes:
   backend-dbstore:
   uploads:
+  redis-data:
