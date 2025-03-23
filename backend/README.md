@@ -13,7 +13,7 @@
 
 ## 结果展示
 
-![Perplexica Backend Demo](.PixPin_2025-03-23_21-29-01.gif)
+![Perplexica Backend Demo](./PixPin_2025-03-23_21-29-01.gif)
 
 ## 环境要求
 
